@@ -52,11 +52,11 @@ const router: Router = Router();
   
   // Root Endpoint
   // Displays a simple message to the user
-  router.get( "/", async ( req, res ) => {
+  router.get( "/", async ( req:express.Request, res:express.Response ) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
 
-  router.get( "/filteredimage", requireAuth, async ( req, res ) => {
+  router.get( "/filteredimage", requireAuth, async ( req:express.Request, res:express.Response ) => {
     const { image_url } = req.query;
 
     if (!image_url) {
@@ -78,7 +78,7 @@ const router: Router = Router();
 
   } );
 
-  router.post('/login', async (req: Request, res: Response) => {
+  router.post('/login', async (req:express.Request, res:express.Response) => {
       const email = req.body.email;
       const password = req.body.password;
       // check email is valid
