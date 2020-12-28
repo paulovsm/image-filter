@@ -1,5 +1,5 @@
 import fs from 'fs';
-import Jimp = require('jimp');
+import Jimp from "jimp";
 
 // filterImageFromURL
 // helper function to download, filter, and save the filtered image locally
@@ -16,7 +16,7 @@ export async function filterImageFromURL(inputURL: string): Promise<string>{
         .resize(256, 256) // resize
         .quality(60) // set JPEG quality
         .greyscale() // set greyscale
-        .write(__dirname+outpath,  err => {
+        .write(__dirname+outpath,  (err: any) => {
             if (err) {
                 console.error('write error: ', err);
             }

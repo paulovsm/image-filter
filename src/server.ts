@@ -65,7 +65,7 @@ const router: Router = Router();
 
     console.log(image_url);
 
-    const image_path:string = await filterImageFromURL(image_url);
+    const image_path:string = await filterImageFromURL(image_url.toString());
 
     res.sendFile(image_path, (err) => { 
       if (err) { 
