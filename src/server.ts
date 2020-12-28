@@ -1,8 +1,20 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import { Router, Request, Response } from 'express';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import { NextFunction } from 'connect';
+import * as EmailValidator from 'email-validator';
+import { config } from './config/config';
+import { sequelize, User } from './sequelize';
+
+const router: Router = Router();
 
 (async () => {
+
+  await sequelize.addModels([User]);
+  await sequelize.sync();
 
   // Init the Express application
   const app = express();
@@ -12,6 +24,13 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
+
+  app.use('/api/v0/', router)
+
+  // Root URI call
+  app.get( "/", async ( req, res ) => {
+    res.send( "/api/v0/" );
+  } );
 
   // @TODO1 IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
@@ -33,11 +52,11 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   
   // Root Endpoint
   // Displays a simple message to the user
-  app.get( "/", async ( req, res ) => {
+  router.get( "/", async ( req, res ) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
 
-  app.get( "/filteredimage", async ( req, res ) => {
+  router.get( "/filteredimage", requireAuth, async ( req, res ) => {
     const { image_url } = req.query;
 
     if (!image_url) {
@@ -58,6 +77,47 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
     });
 
   } );
+
+  router.post('/login', async (req: Request, res: Response) => {
+      const email = req.body.email;
+      const password = req.body.password;
+      // check email is valid
+      if (!email || !EmailValidator.validate(email)) {
+          return res.status(400).send({ auth: false, message: 'Email is required or malformed' });
+      }
+
+      // check email password valid
+      if (!password) {
+          return res.status(400).send({ auth: false, message: 'Password is required' });
+      }
+
+      const user = await User.findByPk(email);
+      // check that user exists
+      if(!user) {
+          return res.status(401).send({ auth: false, message: 'Unauthorized' });
+      }
+
+      // check that the password matches
+      const authValid = await comparePasswords(password, user.password_hash)
+
+      if(!authValid) {
+          return res.status(401).send({ auth: false, message: 'Unauthorized' });
+      }
+
+      // Generate JWT
+      const jwt = generateJWT(user);
+
+      res.status(200).send({ auth: true, token: jwt, user: user.short()});
+  });
+
+  async function comparePasswords(plainTextPassword: string, hash: string): Promise<boolean> {
+      //@TODO Use Bcrypt to Compare your password to your Salted Hashed Password
+      return bcrypt.compare(plainTextPassword, hash);
+  }
+
+  function generateJWT(user: User): string {
+      return jwt.sign(user.email, config.jwt.secret);
+  }
 
   function requireAuth(req: Request, res: Response, next: NextFunction) {
     if (!req.headers || !req.headers.authorization){
