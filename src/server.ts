@@ -36,6 +36,48 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   app.get( "/", async ( req, res ) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
+
+  app.get( "/filteredimage", async ( req, res ) => {
+    const { image_url } = req.query;
+
+    if (!image_url) {
+      return res.status(400).send({ message: 'image_url parameter is required' });
+    }
+
+    console.log(image_url);
+
+    const image_path:string = await filterImageFromURL(image_url);
+
+    res.sendFile(image_path, (err) => { 
+      if (err) { 
+        return res.status(500).send({ message: 'Unable to send image' }); 
+      } else { 
+          console.log('Sent:', image_path);
+          deleteLocalFiles([image_path]);
+      } 
+    });
+
+  } );
+
+  function requireAuth(req: Request, res: Response, next: NextFunction) {
+    if (!req.headers || !req.headers.authorization){
+        return res.status(401).send({ message: 'No authorization headers.' });
+    }
+    
+    const token_bearer = req.headers.authorization.split(' ');
+    if(token_bearer.length != 2){
+        return res.status(401).send({ message: 'Malformed token.' });
+    }
+    
+    const token = token_bearer[1];
+
+    return jwt.verify(token, config.jwt.secret, (err, decoded) => {
+      if (err) {
+        return res.status(500).send({ auth: false, message: 'Failed to authenticate.' });
+      }
+      return next();
+    });
+}
   
 
   // Start the Server
